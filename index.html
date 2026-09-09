@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Exemple basique d'utilisation du code de manipulation GS1">
+    <title>GS1 tester</title>
+    <style>
+        /* Style de base pour un rendu propre */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        header,
+        nav,
+        main,
+        footer {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        header,
+        nav,
+        footer {
+            padding: 1rem;
+        }
+
+        header {
+            background: #333;
+            color: #fff;
+        }
+
+        nav a {
+            color: #fff;
+            margin-right: 1rem;
+            text-decoration: none;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            margin-top: 1rem;
+            border-radius: 5px;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding-top: 0.8rem;
+            padding-bottom: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 0.9rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .container {
+            display: flex;
+            padding-top: 2rem;
+            gap: 2rem;
+        }
+
+        .column {
+            flex: 1;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .result {
+            min-height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+
+            padding: 1rem;
+            background-color: #f5f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+        }
+    </style>
+    <script type="text/javascript" src="GS1DigitalLink.js"></script>
+    <script type="text/javascript" src="qrcode_reader.js"></script>
+    <script type="text/javascript" src="html5-qrcode.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <h1>Test des QRCode GS1 DigitalLink</h1>
+        <nav>
+            <a
+                href="https://boxinfo.apple.com/125787/01/00195951031026/21/HPQNJ76Q2J?8040=351927999506354&8041=351927997904288&8042=89043052010008887025036884863468">Exemple
+                Apple</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Colonne gauche : Formulaire -->
+            <div class="column">
+                <h2>📝 Test tes QRCode</h2>
+                <div class="form-group">
+                    <label for="name">QrCode (URL)</label>
+                    <input type="text" name="gs1link" required />
+                </div>
+
+                <button id="parse">Parse</button>
+                <button id="qrCodeScanner" style="display: none;">Scan from Webcam</button>
+            </div>
+
+            <!-- Colonne droite : Résultat -->
+            <div class="column">
+                <h2>👁️ Résultat</h2>
+                <div id="result" class="result">
+                    Soumettez le formulaire pour voir les données ici.
+                </div>
+            </div>
+        </div>
+        <div class="container" id="cameraContainer" style="display:none">
+            <div class="column">
+                <div id='cameraList'></div>
+            </div>
+            <div class="column">
+                <video id="video" autoplay playsinline></video>
+                <br>
+                <button id="switchBtn">Switch Camera</button>
+            </div>
+        </div>
+        <div class="container" id="qrcode_scanner">
+            <div class="column">
+                <div id="reader" style="width: 400px"></div>
+            </div>
+            <div class="column">
+                <h2>👁️ Résultat du scan</h2>
+                <div class="result">
+                    Commencez à scanner
+                </div>
+            </div>
+        </div>
+        
+    </main>
+
+    <footer>
+        &copy; 2026 Orange. Tous droits réservés.
+    </footer>
+
+    <script type="text/javascript">
+        var gs1;
+
+        const dictionaryURL = "https://raw.githubusercontent.com/gs1/gs1-syntax-dictionary/2026-01-27/gs1-syntax-dictionary.txt";
+
+        // désactivation de l'ihm de scan des QrCode
+        document.getElementById("parse").setAttribute('disabled', "disabled");
+
+        // Initialisation du parser de QRCode GS1
+        GS1DigitalLink.fromGithubLastTag('gs1', 'gs1-syntax-dictionary', 'gs1-syntax-dictionary.txt')
+        .then(gs1Result => {
+            console.log('GS1 Parser Ready');
+
+            gs1 = gs1Result;
+
+            // A partir de maintenant on peut scanner les QrCodes
+            // activation de l'ihm de scan des QrCode
+            document.getElementById("parse").removeAttribute("disabled");
+
+            // Example d'URL GS1 correct
+            // https://example.com/01/09520123456788/10/LOT123/21/SERIAL456?17=261231&3103=000500
+            
+            // Example d'URL Apple Correct
+            // https://boxinfo.apple.com/125787/01/00195951031026/21/HPQNJ76Q2J?8040=351927999506354&8041=351927997904288&8042=89043052010008887025036884863468 
+
+            console.log(
+                gs1.parse("https://boxinfo.apple.com/125787/01/00195951031026/21/HPQNJ76Q2J?8040=351927999506354&8041=351927997904288&8042=89043052010008887025036884863468")
+            );
+        });
+
+        // Test GS1 parser
+        window.addEventListener("load", function () {
+            console.log('GS1 : Page loaded, now binding some events');
+            document.getElementById("parse").onclick = function () {
+                console.log('clicked');
+                let url = document.getElementsByName('gs1link')[0].value;
+                console.log(url);
+
+                const parsed = gs1.parse(url);
+
+                let htmlResult = "<p>Identifier " + parsed.primaryKey.definition.title + "(" + parsed.primaryKey.ai + ") avec comme valeur " + parsed.primaryKey.value + "</p>";
+                for (const qualifier of parsed.qualifiers) {
+                    htmlResult += "<p>Qualifier " + qualifier.definition.title + "(" + qualifier.ai + ") avec comme valeur " + qualifier.value + "</p>";
+                }
+
+                for (const dataAttribute of parsed.dataAttributes) {
+                    htmlResult += "<p>Attribut " + dataAttribute.definition.title + "(" + dataAttribute.ai + ") avec comme valeur " + dataAttribute.value + "</p>";
+                }
+
+                document.getElementById('result').innerHTML = htmlResult;
+                console.log(parsed.primaryKey);
+                console.log(parsed.qualifiers);
+                console.log(parsed.dataAttributes);
+                console.log(parsed.extensions);
+            };
+
+            document.querySelector('nav a').onclick = function (event) {
+                event.stopPropagation();
+                event.preventDefault();
+                document.getElementsByName('gs1link')[0].value = this.href;
+            };
+        });
+
+        // Test Camera pour lecture QRCode
+        window.addEventListener("load", function () {
+            bindSwicther(document.getElementById("switchBtn"));
+            document.getElementById('qrCodeScanner').onclick = function () {
+                let container = document.getElementById('cameraContainer');
+                let enable = (container.style.display === "none");
+
+                container.style.display = enable ? "block" : "none";
+
+                if (enable) {
+                    // Start with front camera
+                    startCamera(currentFacingMode);
+                    this.innerText="Close Webcam";
+                } else {
+                    this.innerText="Open Webcam scanner";
+                    closeCamera();
+                }
+            };
+            // Run on page load
+            listCameras();
+        });
+
+        listeDecodedScan = [];
+
+        window.addEventListener("load", function() {
+            // test html5-qrcode
+            function onScanSuccess(decodedText, decodedResult) {
+                const resultContainer = document.querySelector('#qrcode_scanner .result');
+
+                // Handle on success condition with the decoded text or result.
+                console.log(`Scan result: ${decodedText}`, decodedResult);
+
+                let identifier = window.btoa(decodedText);
+
+                console.log(identifier);
+                
+                let index = listeDecodedScan.indexOf(identifier);
+                if(index !== -1) {
+                    let domElements = document.querySelectorAll("#qrcode_scanner span.counter");
+                    let domElement = domElements[index];
+                    domElement.innerText = parseInt(domElement.innerText) + 1;
+                } else {
+                    listeDecodedScan.push(identifier);
+                    resultContainer.innerHTML += "<p>QrCode detecté <span class='counter'>1</span> fois " + decodedText + "</p>";
+                    document.querySelector('input[name="gs1link"]').value = decodedText;
+                    document.getElementById('parse').click();
+                }
+            }
+
+            /*
+            enum Html5QrcodeSupportedFormats {
+                QR_CODE = 0,
+                AZTEC,
+                CODABAR,
+                CODE_39,
+                CODE_93,
+                CODE_128,
+                DATA_MATRIX,
+                MAXICODE,
+                ITF,
+                EAN_13,
+                EAN_8,
+                PDF_417,
+                RSS_14,
+                RSS_EXPANDED,
+                UPC_A,
+                UPC_E,
+                UPC_EAN_EXTENSION,
+            }
+            */
+
+            const qrcodeScanner = new Html5QrcodeScanner(
+                "reader", { 
+                    fps: 15, 
+                    qrbox: 250 ,
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.EAN_13
+                    ]
+                }
+            );
+            qrcodeScanner.render(onScanSuccess);
+        });
+    </script>
+</body>
+
+</html>
