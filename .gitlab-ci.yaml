@@ -1,0 +1,23 @@
+default:
+  image: node:20
+
+publish:
+  stage: build
+  variables:
+    NPM_REGISTRY_URL: "$CI_SERVER_PROTOCOL://$CI_SERVER_HOST:$CI_SERVER_PORT/api/v4/projects/$CI_PROJECT_ID/packages/npm
+  script:
+    - |
+        cat > ~/.npmrc << EOF
+        //${CI_SERVER_HOST}:${CI_SERVER_PORT}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}
+        registry=${NPM_REGISTRY_URL}
+        EOF
+    # Vérifier que le package.json existe et a une version valide
+    - test -f package.json || (echo "package.json not found" && exit 1)
+    - node -e "const p=require('./package.json'); if(!p.version) throw new Error('No version in package.json')"
+    
+    # Publier le paquet
+    - npm publish
+  only:
+    refs:
+      - master
+      - main

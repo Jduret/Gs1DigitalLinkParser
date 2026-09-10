@@ -1,0 +1,40 @@
+{
+  "name": "@72t-packages/gs1-digitallink-parser",
+  "description": "Parse, validate and build GS1 URL directly from dictionary given in GS1 offocial Github repo",
+  "version": "1.0.0",
+  "keywords": [
+    "qrcode",
+    "scanner",
+    "GS1",
+    "barcode"
+  ],
+  "author": "JDuret (JDev4U) <jodev4u@gmail.com",
+  "type": "module",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --config vite.config.build.js",
+    "esbuild": "esbuild src/GS1DigitalLink.js --bundle --platform=node --format=esm --outfile=dist/index.mjs && esbuild src/GS1DigitalLink.js --bundle --platform=node --format=cjs --outfile=dist/index.js",
+    "preview": "vite preview",
+    "publish:npm": "npm publish --registry=https://registry.npmjs.org/ --access public"
+  },
+  "devDependencies": {
+    "html5-qrcode": "^2.3.8",
+    "qrcode": "^1.5.4",
+    "vite": "^8.2.2"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

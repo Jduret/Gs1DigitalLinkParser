@@ -31,7 +31,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-class GS1DigitalLinkError extends Error {
+export class GS1DigitalLinkError extends Error {
   constructor(message, details = {}) {
     super(message);
     this.name = "GS1DigitalLinkError";
@@ -39,7 +39,7 @@ class GS1DigitalLinkError extends Error {
   }
 }
 
-class GS1DigitalLink {
+export class GS1DigitalLink {
   /**
    * @param {string} dictionaryText
    * @param {object} options
@@ -284,7 +284,6 @@ class GS1DigitalLink {
       canonical = false
     } = options;
 
-
     if (
       !primaryKey ||
       primaryKey.ai === undefined ||
@@ -409,9 +408,7 @@ class GS1DigitalLink {
 
     const queryParameters = [];
 
-
     for (const attribute of dataAttributes) {
-
       const ai =
         this.normalizeAI(attribute.ai);
 
@@ -427,7 +424,7 @@ class GS1DigitalLink {
         );
       }
 
-      this.#validateQueryAI(ai, value);
+      this.#validateQueryAI(ai, value, options, dataAttributes);
 
       this.validateAIValue(
         ai,
