@@ -1,0 +1,60 @@
+default:
+  image: node:20
+# Cache node_modules to speed up builds
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - deploy
+
+build-npm-package:
+  stage: build
+  script:  
+    # Builder le paquet
+    - yarn install --frozen-lockfile
+    - npm run build
+    - npm pack
+  artifacts:
+
+
+publish:
+  stage: deploy
+
+  needs:
+    - job: build-npm-package
+      artifacts: true
+
+  variables:
+    NPM_REGISTRY_URL: "$CI_SERVER_PROTOCOL://$CI_SERVER_HOST/api/v4/projects/$CI_PROJECT_ID/packages/npm"
+  script:
+    - echo "Configuring npm for GitLab Registry..."
+  
+    # 1. Définir la registry
+    - npm config set @72t-packages:registry=$NPM_REGISTRY_URL
+
+    # 2. Configurer l'authentification
+    # Le format _authToken doit être préfixé par //host:port/path/
+    # Si CI_SERVER_PORT est vide ou 443, ajustez selon votre environnement
+    - |
+      AUTH_KEY="//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/"
+      npm config set ${AUTH_KEY}:_authToken="${TOKEN_NPM_ALLACCESS}"
+      echo "Token length: $(echo -n $TOKEN_NPM_ALLACCESS | wc -c)"
+
+    # 3. Vérifier la configuration (optionnel mais utile pour debug)
+    - npm config list
+
+    # 4. Vérifier que le package.json existe et a une version valide
+    - test -f package.json || (echo "package.json not found" && exit 1)
+    - node -e "const p=require('./package.json'); if(!p.version) throw new Error('No version in package.json')"
+
+    # 5. Verifier l'authent
+    - npm whoami --registry="$NPM_REGISTRY_URL"
+
+    # 6. Publier le paquet
+    - npm publish
+  only:
+    refs:
+      - tags
