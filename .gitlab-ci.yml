@@ -1,0 +1,62 @@
+include:
+
+  # Node.js template
+  # https://gitlab.tech.orange/to-be-continuous/node
+  - component: gitlab.tech.orange/to-be-continuous/node/gitlab-ci-node@5.4
+    inputs:
+      manager: yarn
+      lint-enabled: false
+      publish-enabled: true
+      test-args: config list # try to disable test by bypassing test command
+      audit-disabled: true
+      outdated-disabled: true
+      semgrep-disabled: true
+      sbom-disabled: true
+      config-registry: "$CI_SERVER_PROTOCOL://$CI_SERVER_HOST/api/v4/projects/$CI_PROJECT_ID/packages/npm"
+      build-args: run build
+      
+  # Semantic release template
+  # https://gitlab.tech.orange/to-be-continuous/semantic-release
+  - component: gitlab.tech.orange/to-be-continuous/semantic-release/gitlab-ci-semrel@4.3
+    inputs:
+      info-on: prod
+      auto-release-enabled: true
+      changelog-enabled: true
+
+# Pipeline stages
+stages:
+  - build
+  - test
+  - package-build
+  - package-test
+  - deploy
+  - acceptance
+  - verify
+  - publish
+  - production
+
+check-version:
+  stage: verify
+  image: node:lts
+  script:
+    - |
+      # 1. Extraire la version de package.json avec Node.js
+      PKG_VERSION=$(node -p "require('./package.json').version")
+      
+      # 2. Nettoyer le tag GitLab (retirer le préfixe 'v' s'il existe)
+      TAG_VERSION="${CI_COMMIT_TAG#v}"
+      
+      echo "Version dans package.json : $PKG_VERSION"
+      echo "Version du tag            : $TAG_VERSION"
+      
+      # 3. Comparer
+      if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+        echo "❌ ÉCHEC : Le tag '$CI_COMMIT_TAG' ne correspond pas à la version '$PKG_VERSION' de package.json."
+        exit 1
+      else
+        echo "✅ SUCCÈS : La version du tag correspond à celle de package.json."
+      fi
+  rules:
+    - if: $CI_COMMIT_TAG        # Ne s'exécute que sur les tags
+    - when: never
+
