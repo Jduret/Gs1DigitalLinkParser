@@ -75,6 +75,54 @@
     <script type="module">
         import { GS1DigitalLink } from '../src/GS1DigitalLink.js';
 
+        export class TerminalGs1 {
+            /**
+             * @param {GS1DigitalLink|object} gs1
+             */
+            constructor(gs1) {
+                if (typeof gs1 !== "object") {
+                    throw new TypeError(
+                        "object required. " + (typeof gs1) + " given."
+                    );
+                }
+
+                this.gs1 = gs1;
+
+                if(!this.isValid()) {
+                    throw new TypeError(
+                        "Given GS1DigitalLink is not a valid mobile Gs1."
+                    );
+                }
+            }
+
+            isValid() {
+                return null !== this.getEan13() ;
+            }
+
+            getAi(ai) {
+                for(const dataAttribute of this.gs1.dataAttributes) {
+                    if (dataAttribute.ai == ai) {
+                        return dataAttribute;
+                    }
+                }
+
+                return null;
+            }
+
+            getEan13() {
+                //on retire le 0 en trop devant === on garde les 13 derniers caractères
+                return this.gs1.primaryKey.value.substr(-13);
+            }
+
+            getImei1() {
+                return this.getAi(8040)?.value ?? null;
+            }
+            
+            getImei2() {
+                return this.getAi(8041)?.value ?? null;
+            }
+        };
+
         var gs1;
 
         const dictionaryURL = "https://raw.githubusercontent.com/gs1/gs1-syntax-dictionary/2026-01-27/gs1-syntax-dictionary.txt";
@@ -144,6 +192,13 @@
                 console.log('clicked');
                 let url = document.getElementsByName('gs1link')[0].value;
                 console.log(url);
+				
+				if(!gs1.isValid(url)) {
+				  console.log('Not a valid GS1 URI');
+				  return;
+				}
+
+                
 
                 const parsed = gs1.parse(url);
 
@@ -157,10 +212,16 @@
                 }
 
                 document.getElementById('result').innerHTML = htmlResult;
+                
                 console.log(parsed.primaryKey);
                 console.log(parsed.qualifiers);
                 console.log(parsed.dataAttributes);
                 console.log(parsed.extensions);
+                
+                let terminalQrCode = new TerminalGs1(parsed);
+                console.log(terminalQrCode.getEan13());
+                console.log(terminalQrCode.getImei1());
+                console.log(terminalQrCode.getImei2());                
             };
 
             document.querySelector('nav a').onclick = function (event) {
@@ -274,7 +335,7 @@
                 console.log("Generating QrCode for ", text);
 
                 // Input validation
-                if (!text || ) {
+                if (!text) {
                     alert("Please enter some text or a URL.");
                     return;
                 }
